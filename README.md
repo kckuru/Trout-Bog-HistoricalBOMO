@@ -1,2 +1,2 @@
-# Trout-Bog-BOMO
-This is a repo for Trout Bog BOMO work.
+# Trout-Bog-HistoricalBOMO
+This is a repo for historical Trout Bog BOMO work.
