@@ -1,2 +1,2 @@
-# Trout-Bog-EET
-This is a repo for Trout Bog EET work.
+# Trout-Bog-BOMO
+This is a repo for Trout Bog BOMO work.
