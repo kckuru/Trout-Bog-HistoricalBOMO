@@ -1,4 +1,4 @@
-﻿Date,Time,Site,Unit ID,User ID,Temp,Barometer,ODO,ODO.1,Sp_Cond,C-uS/cm-18E103508,nLFC-uS/cm-18E103508,TDS,Sal,pH,pH.1,ORP,Turbidity,TSS,Depth,Vertical_Position,Pressure
+Date,Time,Site,Unit ID,User ID,Temp,Barometer,ODO,ODO.1,Sp_Cond,C_uS,nLFC,TDS,Sal,pH,pH.1,ORP,Turbidity,TSS,Depth,Vertical_Position,Pressure
 7/11/2022,12:28:30 PM,Trout Bog,BogGhost,Charles,26.662,711.4,87.7,7.04,17.7,18.2,17.6,11,0.01,4.63,124.7,270.8,-0.34,0,0.274,0.283,0.003
 7/11/2022,12:28:32 PM,Trout Bog,BogGhost,Charles,26.631,711.4,87.8,7.04,17.1,17.6,17,11,0.01,4.63,124.6,270.8,-0.35,0,0.275,0.293,0.004
 7/11/2022,12:28:34 PM,Trout Bog,BogGhost,Charles,26.625,711.4,87.9,7.05,17.1,17.6,17,11,0.01,4.63,124.6,270.9,-0.34,0,0.274,0.268,0.003

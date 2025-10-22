@@ -1,4 +1,4 @@
-DATE,TIME,SITE,PROBE_ID,Barometer,Cond,Sp_Cond,Sal,nLFCond,TDS,Temp,Sigma,Sigma.1,ODO,ODO.1,ODO.2,Turbidity,TSS,pH,pH.1,ORP,Pressure,Depth,Vertical_Position
+Date,Time,Site,PROBE_ID,Barometer,Cond,Sp_Cond,Sal,nLFCond,TDS,Temp,Sigma,Sigma.1,ODO,ODO.1,ODO.2,Turbidity,TSS,pH,pH.1,ORP,Pressure,Depth,Vertical_Position
 7/24/2023,12:11:58 PM,Trout Bog,BogGhost,719.7,19.1,19.2,0.01,19.2,12,24.66666667,-2.9,-2.9,94.5,7.86,99.8,0.06,0,4.4,123.6,372.2,0.018,0,0.283
 7/24/2023,12:12:00 PM,Trout Bog,BogGhost,719.8,19.1,19.2,0.01,19.2,12,24.77777778,-2.9,-2.9,95,7.89,100.3,0.06,0,4.4,123.5,373.1,0.017,0.015,0.288
 7/24/2023,12:12:02 PM,Trout Bog,BogGhost,719.7,19.2,19.3,0.01,19.3,13,24.83333333,-2.9,-2.9,95.2,7.89,100.6,0.05,0,4.4,123.5,373.7,0.018,0.03,0.302
