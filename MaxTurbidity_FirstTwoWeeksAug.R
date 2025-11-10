@@ -65,12 +65,12 @@ turb_profile <- all_data %>%
 # 4. Plot turbidity profiles by year
 # -----------------------------
 ggplot(turb_profile, aes(x = mean_turb, y = Depth, color = factor(year))) +
-  geom_path(linewidth = 1.2) +
-  geom_point(size = 3, alpha = 0.8) +
+  geom_path(linewidth = 0.7) +        # thinner line
+  geom_point(size = 2, alpha = 0.7) + # smaller points
   geom_errorbarh(aes(xmin = mean_turb - se_turb, xmax = mean_turb + se_turb),
-                 height = 0.1, alpha = 0.5) +
-  scale_y_reverse(expand = c(0, 0)) +  # reverse so 0 m is at top
-  scale_x_continuous(limits = c(0, 7), expand = c(0, 0)) +  # cap x-axis at 10 FNU
+                 height = 0.05, alpha = 0.4, linewidth = 0.4) + # thinner error bars
+  scale_y_reverse(expand = c(0, 0)) +
+  scale_x_continuous(limits = c(0, 7), expand = c(0, 0)) +
   scale_color_viridis_d(option = "plasma", end = 0.8) +
   labs(
     title = "Turbidity Profiles (Aug 1–14)",
@@ -87,18 +87,20 @@ ggplot(turb_profile, aes(x = mean_turb, y = Depth, color = factor(year))) +
     panel.grid.minor = element_blank()
   )
 
+
+
 # -----------------------------
 # 5. Enhanced visualization with two panels
 # -----------------------------
 
 # Full depth profile (cleaner version)
 p_full <- ggplot(turb_profile, aes(x = mean_turb, y = Depth, color = factor(year))) +
-  geom_path(linewidth = 1.5, alpha = 0.8) +
-  geom_point(size = 3.5, alpha = 0.9) +
+  geom_path(linewidth = 0.8, alpha = 0.8) +
+  geom_point(size = 2, alpha = 0.8) +
   scale_y_reverse(limits = c(8, 0), breaks = seq(0, 8, 1)) +
   scale_x_continuous(limits = c(0, 7.5), breaks = seq(0, 7, 1)) +
   scale_color_manual(
-    values = c("2021" = "#0D0887", "2022" = "#7E03A8", 
+    values = c("2021" = "#0D0887", "2022" = "#7E03A8",
                "2023" = "#CC4678", "2024" = "#F89540")
   ) +
   labs(
@@ -113,7 +115,7 @@ p_full <- ggplot(turb_profile, aes(x = mean_turb, y = Depth, color = factor(year
     axis.text = element_text(color = "black"),
     panel.grid.minor = element_blank(),
     panel.grid.major = element_line(color = "gray90"),
-    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.4),
     legend.position = "right"
   )
 
@@ -121,14 +123,14 @@ p_full <- ggplot(turb_profile, aes(x = mean_turb, y = Depth, color = factor(year
 p_zoom <- turb_profile %>%
   filter(Depth >= 0.5, Depth <= 2.25) %>%
   ggplot(aes(x = mean_turb, y = Depth, color = factor(year))) +
-  geom_path(linewidth = 2, alpha = 0.9) +
-  geom_point(size = 4, alpha = 0.9) +
+  geom_path(linewidth = 0.9, alpha = 0.8) +
+  geom_point(size = 2.5, alpha = 0.85) +
   geom_errorbarh(aes(xmin = mean_turb - se_turb, xmax = mean_turb + se_turb),
-                 height = 0.02, alpha = 0.6, linewidth = 1) +
+                 height = 0.03, alpha = 0.5, linewidth = 0.5) +
   scale_y_reverse(limits = c(2.25, 0.5), breaks = seq(0.5, 2.25, 0.25)) +
   scale_x_continuous(limits = c(0, 4), breaks = seq(0, 4, 1)) +
   scale_color_manual(
-    values = c("2021" = "#0D0887", "2022" = "#7E03A8", 
+    values = c("2021" = "#0D0887", "2022" = "#7E03A8",
                "2023" = "#CC4678", "2024" = "#F89540")
   ) +
   labs(
@@ -143,9 +145,10 @@ p_zoom <- turb_profile %>%
     axis.text = element_text(color = "black"),
     panel.grid.minor = element_blank(),
     panel.grid.major = element_line(color = "gray90"),
-    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.5),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 0.4),
     legend.position = "right"
   )
+
 
 # Combine plots side by side
 combined_plot <- p_full + p_zoom + 
@@ -167,17 +170,17 @@ print(combined_plot)
 p_faceted <- turb_profile %>%
   ggplot(aes(x = mean_turb, y = Depth)) +
   geom_ribbon(aes(xmin = mean_turb - se_turb, xmax = mean_turb + se_turb, fill = factor(year)),
-              alpha = 0.3) +
-  geom_path(aes(color = factor(year)), linewidth = 1.5) +
-  geom_point(aes(color = factor(year)), size = 2.5) +
+              alpha = 0.25) +
+  geom_path(aes(color = factor(year)), linewidth = 0.8) +
+  geom_point(aes(color = factor(year)), size = 2) +
   scale_y_reverse(breaks = seq(0, 8, 1)) +
   scale_x_continuous(limits = c(0, 5)) +
   scale_color_manual(
-    values = c("2021" = "#0D0887", "2022" = "#7E03A8", 
+    values = c("2021" = "#0D0887", "2022" = "#7E03A8",
                "2023" = "#CC4678", "2024" = "#F89540")
   ) +
   scale_fill_manual(
-    values = c("2021" = "#0D0887", "2022" = "#7E03A8", 
+    values = c("2021" = "#0D0887", "2022" = "#7E03A8",
                "2023" = "#CC4678", "2024" = "#F89540")
   ) +
   facet_wrap(~year, nrow = 1) +
@@ -197,5 +200,47 @@ p_faceted <- turb_profile %>%
     strip.text = element_text(face = "bold", size = 12),
     legend.position = "none"
   )
-
 print(p_faceted)
+
+# ------------------------------  
+# 7. Looking at max turbidity peak depth over years
+# -----------------------------
+
+turb_peak <- all_data %>%
+  filter(month(date_only) == 8, day(date_only) <= 14) %>%
+  filter(Depth >= 0.5, Depth <= 2.5)
+
+turb_peak_summary <- turb_peak %>%
+  group_by(year) %>%
+  slice_max(Turbidity, n = 1, with_ties = FALSE) %>%
+  summarise(
+    mean_peak_depth = mean(Depth, na.rm = TRUE),
+    sd_peak_depth   = sd(Depth, na.rm = TRUE),
+    se_peak_depth   = sd_peak_depth / sqrt(n()),
+    mean_peak_turb  = mean(Turbidity, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+lm_turb_peak <- lm(mean_peak_depth ~ year, data = turb_peak_summary)
+summary(lm_turb_peak)
+
+library(ggpmisc)
+
+max_turb_peak_overyears <- ggplot(turb_peak_summary, aes(x = year, y = mean_peak_depth)) +
+  geom_point(size = 3, color = "#31688E") +
+  geom_line(linewidth = 1, color = "#31688E") +
+  geom_smooth(method = "lm", se = TRUE, color = "darkorange",
+              fill = "orange", alpha = 0.2, linetype = "dashed") +
+  scale_y_reverse(limits = c(2.5, 0.5)) +
+  stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+               formula = y ~ x, parse = TRUE, label.x.npc = "right",
+               label.y.npc = 0.1, size = 4) +
+  labs(
+    title = "Depth of Turbidity Maximum (Aug 1–14)",
+    subtitle = "Trout Bog Lake, 2021–2024",
+    x = "Year",
+    y = "Depth (m)"
+  ) +
+  theme_minimal(base_size = 14)
+
+max_turb_peak_overyears
