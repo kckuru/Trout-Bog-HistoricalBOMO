@@ -5,7 +5,6 @@ library(viridis)
 library(patchwork)
 library(akima)
 
-
 # -----------------------------
 # Function to read Trout Bog CSVs safely
 # -----------------------------
@@ -130,13 +129,14 @@ create_publication_profile <- function(data, year_select, variable, var_label,
     ) +
     labs(
       title = paste(var_label, year_select),
-      x = "",
+      x = "Time (d)",
       y = "Depth (m)",
       fill = ""
     ) +
     theme_classic() +
     theme(
       plot.title = element_text(hjust = 0, size = 11, face = "bold"),
+      axis.title.x = element_text(size = 10),
       axis.title.y = element_text(size = 10),
       axis.text = element_text(size = 9, color = "black"),
       legend.position = "right",
@@ -186,10 +186,10 @@ create_year_panels <- function(data, year_select) {
   plots$o2 <- tryCatch({
     create_publication_profile(
       data, year_select, "ODO", 
-      expression(O[2]~(mu*M)), "viridis", c(0, 250)
+      "DO (mg/L)", "viridis", c(0, 250)
     )
   }, error = function(e) {
-    message(paste("Skipping O2 for", year_select, "- no data available"))
+    message(paste("Skipping DO for", year_select, "- no data available"))
     NULL
   })
   
@@ -233,11 +233,9 @@ plot_2024 <- tryCatch({
   NULL
 })
 
-
 # -----------------------------
 # Display (only non-NULL plots)
 # -----------------------------
 if(!is.null(plot_2022)) print(plot_2022)
 if(!is.null(plot_2023)) print(plot_2023)
 if(!is.null(plot_2024)) print(plot_2024)
-
