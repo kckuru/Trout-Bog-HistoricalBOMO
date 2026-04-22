@@ -136,7 +136,7 @@ print(depth_absorbance)
 # PART 4: PLOT PEAK DEPTH VS ABSORBANCE
 # =======================================================
 
-p_abs <- ggplot(depth_absorbance, aes(x = mean_A440, y = peak_depth)) +
+p_depth_vs_abs <- ggplot(depth_absorbance, aes(x = mean_A440, y = peak_depth)) +
   geom_point(aes(fill = factor(year)), shape = 21, size = 4.5, color = "gray30") +
   geom_smooth(method = "lm", se = TRUE, linetype = "dashed",
               color = "#8B4513", fill = "#8B4513", alpha = 0.15) +
@@ -150,5 +150,5 @@ p_abs <- ggplot(depth_absorbance, aes(x = mean_A440, y = peak_depth)) +
   ) +
   theme_minimal(base_size = 13)
 
-p_abs
+p_depth_vs_abs
 

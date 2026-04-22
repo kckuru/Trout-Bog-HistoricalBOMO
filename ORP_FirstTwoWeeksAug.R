@@ -1,29 +1,66 @@
-# ============================================
-# ORP Peak Depth Analysis: Trout Bog Lake
-# Depth range: 1–2.5 m
-# ============================================
+#####################################
+# ORP peak depth analysis, 2018–2024
+#####################################
 
-# --- Libraries ---
 library(tidyverse)
 library(lubridate)
 library(here)
 library(patchwork)
-library(ggpmisc)
 
-# ============================================
-# 1. Read and combine data
-# ============================================
+# -------------------------------------------------------
+# Color palette
+# -------------------------------------------------------
+year_colors <- c(
+  "2018" = "#1A7A6E",
+  "2019" = "#52A898",
+  "2020" = "#93C5BC",
+  "2021" = "#C4A882",
+  "2022" = "#B07520",
+  "2023" = "#8B4513",
+  "2024" = "#3D1A02"
+)
 
+col_trend <- "#5C3A1E"
+
+theme_profile <- theme_minimal(base_size = 13) +
+  theme(
+    plot.title       = element_text(face = "bold", hjust = 0.5, size = 13),
+    axis.text        = element_text(color = "black"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.border     = element_rect(color = "black", fill = NA, linewidth = 0.4),
+    legend.position  = "right"
+  )
+
+# -------------------------------------------------------
+# DATA LOADING
+# -------------------------------------------------------
 read_trout_bog_data <- function(folder_path) {
-  files <- list.files(here(folder_path), pattern = "Trout_Bog.*\\.csv$", full.names = TRUE)
+  files <- list.files(
+    here(folder_path),
+    pattern = "Trout_Bog.*\\.csv$",
+    full.names = TRUE
+  )
   
   data_list <- lapply(files, function(file) {
     tryCatch({
       df <- read_csv(file, show_col_types = FALSE, col_types = cols(.default = "c"))
+      
+      # Standardize depth column if needed
+      if (!"Depth" %in% names(df) && "Vertical_Position" %in% names(df)) {
+        df <- df %>% rename(Depth = Vertical_Position)
+      }
+      
+      # Standardize ORP column if needed
+      if (!"ORP" %in% names(df) && "ORP_mV" %in% names(df)) {
+        df <- df %>% rename(ORP = ORP_mV)
+      }
+      
       numeric_cols <- c("Depth", "Turbidity", "Temp", "ODO", "ORP")
       for (col in numeric_cols) {
         if (col %in% names(df)) df[[col]] <- as.numeric(df[[col]])
       }
+      
       df %>% mutate(file_name = basename(file))
     }, error = function(e) {
       message(paste("Error reading", file, ":", e$message))
@@ -34,116 +71,239 @@ read_trout_bog_data <- function(folder_path) {
   bind_rows(data_list)
 }
 
-data_2021 <- read_trout_bog_data("2021_data")
-data_2022 <- read_trout_bog_data("2022_data")
-data_2023 <- read_trout_bog_data("2023_data")
-data_2024 <- read_trout_bog_data("2024_data")
-
 all_data <- bind_rows(
-  data_2021 %>% mutate(year = 2021),
-  data_2022 %>% mutate(year = 2022),
-  data_2023 %>% mutate(year = 2023),
-  data_2024 %>% mutate(year = 2024)
-)
-
-# ============================================
-# 2. Parse datetime and filter Aug 1–14
-# ============================================
-
-all_data <- all_data %>%
+  read_trout_bog_data("2018_data") %>% mutate(year = "2018"),
+  read_trout_bog_data("2019_data") %>% mutate(year = "2019"),
+  read_trout_bog_data("2020_data") %>% mutate(year = "2020"),
+  read_trout_bog_data("2021_data") %>% mutate(year = "2021"),
+  read_trout_bog_data("2022_data") %>% mutate(year = "2022"),
+  read_trout_bog_data("2023_data") %>% mutate(year = "2023"),
+  read_trout_bog_data("2024_data") %>% mutate(year = "2024")
+) %>%
   mutate(
-    datetime = mdy_hms(paste(Date, Time), quiet = TRUE),
+    datetime  = mdy_hms(paste(Date, Time), quiet = TRUE),
     date_only = as.Date(datetime)
   ) %>%
-  filter(!is.na(ORP), !is.na(Depth)) %>%
-  filter(month(date_only) == 8, day(date_only) <= 14)
+  filter(!is.na(ORP), !is.na(Depth))
 
-# ============================================
-# 3. Summarize mean ORP by depth (per year)
-# ============================================
+# -------------------------------------------------------
+# Filter: latest August sampling date per year
+# -------------------------------------------------------
+latest_aug_dates <- all_data %>%
+  filter(month(date_only) == 8) %>%
+  group_by(year) %>%
+  summarise(latest_aug = max(date_only, na.rm = TRUE), .groups = "drop")
 
-orp_profile <- all_data %>%
+cat("Latest August sampling date per year:\n")
+print(latest_aug_dates)
+
+all_data_aug <- all_data %>%
+  inner_join(latest_aug_dates, by = "year") %>%
+  filter(date_only == latest_aug)
+
+cat("\nSampling coverage (latest August date per year):\n")
+all_data_aug %>%
+  group_by(year) %>%
+  summarise(
+    date       = unique(date_only),
+    n_readings = n(),
+    .groups    = "drop"
+  ) %>%
+  print()
+
+# -------------------------------------------------------
+# ORP profiles — mean by depth per year
+# -------------------------------------------------------
+orp_profile <- all_data_aug %>%
   group_by(year, Depth) %>%
   summarise(
     mean_orp = mean(ORP, na.rm = TRUE),
-    sd_orp = sd(ORP, na.rm = TRUE),
-    se_orp = sd_orp / sqrt(n())
-  ) %>%
-  ungroup()
-
-# ============================================
-# 4. Plot ORP profiles by year
-# ============================================
-
-ggplot(orp_profile, aes(x = mean_orp, y = Depth, color = factor(year))) +
-  geom_path(linewidth = 0.7) +
-  geom_point(size = 2, alpha = 0.7) +
-  geom_errorbarh(aes(xmin = mean_orp - se_orp, xmax = mean_orp + se_orp),
-                 height = 0.05, alpha = 0.4, linewidth = 0.4) +
-  scale_y_reverse(expand = c(0, 0)) +
-  scale_color_viridis_d(option = "plasma", end = 0.8) +
-  labs(
-    title = "ORP Profiles (Aug 1–14)",
-    subtitle = "Trout Bog Lake, 2021–2024",
-    x = "Mean ORP (mV)",
-    y = "Depth (m)",
-    color = "Year"
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    plot.title = element_text(face = "bold", hjust = 0.5),
-    plot.subtitle = element_text(hjust = 0.5),
-    axis.text = element_text(color = "black"),
-    panel.grid.minor = element_blank()
+    sd_orp   = sd(ORP, na.rm = TRUE),
+    se_orp   = sd_orp / sqrt(n()),
+    n        = n(),
+    .groups  = "drop"
   )
 
-# ============================================
-# 5. Extract peak ORP depth (1–2.5 m)
-# ============================================
-
-orp_peak <- all_data %>%
-  filter(Depth >= 1.25, Depth <= 2.5)  # <-- updated depth range
-
-orp_peak_summary <- orp_peak %>%
+# -------------------------------------------------------
+# Peak ORP depth per year
+# Constrained to target zone (1.25–2.5 m)
+# Ties averaged
+# -------------------------------------------------------
+peak_orp <- orp_profile %>%
+  filter(Depth >= 1.25, Depth <= 2.5) %>%
   group_by(year) %>%
-  slice_max(ORP, n = 1, with_ties = FALSE) %>%
+  mutate(max_orp = max(mean_orp, na.rm = TRUE)) %>%
+  filter(mean_orp == max_orp) %>%
   summarise(
-    mean_peak_depth = mean(Depth, na.rm = TRUE),
-    sd_peak_depth   = sd(Depth, na.rm = TRUE),
-    se_peak_depth   = sd_peak_depth / sqrt(n()),
-    mean_peak_orp   = mean(ORP, na.rm = TRUE)
+    peak_depth = mean(Depth, na.rm = TRUE),
+    peak_orp   = mean(mean_orp, na.rm = TRUE),
+    .groups    = "drop"
   ) %>%
-  ungroup()
+  mutate(year_num = as.numeric(year))
 
-# ============================================
-# 6. Linear model: peak ORP depth over years
-# ============================================
+cat("\nPeak ORP by year:\n")
+print(peak_orp)
 
-lm_orp_peak <- lm(mean_peak_depth ~ year, data = orp_peak_summary)
-summary(lm_orp_peak)
+# -------------------------------------------------------
+# Linear regression on peak depth ~ year
+# -------------------------------------------------------
+lm_fit   <- lm(peak_depth ~ year_num, data = peak_orp)
+lm_sum   <- summary(lm_fit)
+lm_slope <- round(coef(lm_fit)[["year_num"]], 3)
+lm_p     <- round(coef(summary(lm_fit))["year_num", "Pr(>|t|)"], 3)
+lm_r2    <- round(lm_sum$r.squared, 2)
 
-# ============================================
-# 7. Plot peak ORP depth over years
-# ============================================
+lm_label <- paste0(
+  "slope = ", lm_slope, " m yr⁻¹",
+  ",  p = ", lm_p,
+  ",  R² = ", lm_r2
+)
 
-max_orp_peak_overyears <- ggplot(orp_peak_summary, aes(x = year, y = mean_peak_depth)) +
-  geom_point(size = 3, color = "#1F968B") +
-  geom_line(linewidth = 1, color = "#1F968B") +
-  geom_smooth(method = "lm", se = TRUE, color = "darkorange",
-              fill = "orange", alpha = 0.2, linetype = "dashed") +
-  scale_y_reverse(limits = c(2.5, 1)) +  # <-- updated y-axis to match 1–2.5 m
-  stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
-               formula = y ~ x, parse = TRUE, label.x.npc = "right",
-               label.y.npc = 0.1, size = 4) +
+cat("\nLinear regression — peak ORP depth ~ year:\n")
+cat(lm_label, "\n")
+
+# -------------------------------------------------------
+# Confidence interval ribbon data
+# -------------------------------------------------------
+ci_data <- data.frame(
+  year_num = seq(
+    min(peak_orp$year_num),
+    max(peak_orp$year_num),
+    length.out = 100
+  )
+)
+
+ci_pred <- predict(
+  lm_fit,
+  newdata  = ci_data,
+  interval = "confidence",
+  level    = 0.95
+)
+
+ci_data <- cbind(ci_data, as.data.frame(ci_pred))
+
+# -------------------------------------------------------
+# PLOT 1: Full ORP profile
+# -------------------------------------------------------
+p_full <- ggplot(
+  orp_profile,
+  aes(x = mean_orp, y = Depth, color = year)
+) +
+  geom_path(linewidth = 0.8, alpha = 0.85) +
+  geom_point(
+    aes(fill = year),
+    shape = 21, size = 1.8, alpha = 0.9,
+    color = "gray40", stroke = 0.3
+  ) +
+  scale_y_reverse(limits = c(8, 0), breaks = seq(0, 8, 1)) +
+  scale_color_manual(values = year_colors, name = "Year") +
+  scale_fill_manual(values = year_colors, name = "Year") +
   labs(
-    title = "Depth of ORP Maximum (Aug 1–14)",
-    subtitle = "Trout Bog Lake, 2021–2024",
-    x = "Year",
+    title = "Full depth profile",
+    x = "Mean ORP (mV)",
     y = "Depth (m)"
   ) +
-  theme_minimal(base_size = 14)
+  theme_profile +
+  theme(legend.position = "none")
 
-max_orp_peak_overyears
+# -------------------------------------------------------
+# PLOT 2: Zoomed ORP peak zone
+# -------------------------------------------------------
+p_zoom <- orp_profile %>%
+  filter(Depth >= 1.0, Depth <= 2.5) %>%
+  ggplot(aes(x = mean_orp, y = Depth, color = year)) +
+  geom_path(linewidth = 0.9, alpha = 0.85) +
+  geom_point(
+    aes(fill = year),
+    shape = 21, size = 2.2, alpha = 0.9,
+    color = "gray40", stroke = 0.3
+  ) +
+  geom_errorbarh(
+    aes(xmin = mean_orp - se_orp, xmax = mean_orp + se_orp),
+    height = 0.03,
+    alpha = 0.35,
+    linewidth = 0.4
+  ) +
+  scale_y_reverse(limits = c(2.5, 1.0), breaks = seq(1.0, 2.5, 0.25)) +
+  scale_color_manual(values = year_colors, name = "Year") +
+  scale_fill_manual(values = year_colors, name = "Year") +
+  labs(
+    title = "ORP peak zone (1.0–2.5 m)",
+    x = "Mean ORP (mV)",
+    y = "Depth (m)"
+  ) +
+  theme_profile +
+  theme(legend.position = "none")
 
+# -------------------------------------------------------
+# PLOT 3: Peak depth over time + regression
+# -------------------------------------------------------
+p_trend <- ggplot(peak_orp, aes(x = year_num, y = peak_depth)) +
+  geom_ribbon(
+    data = ci_data,
+    aes(x = year_num, ymin = lwr, ymax = upr),
+    inherit.aes = FALSE,
+    fill = "#D8C3A5",
+    alpha = 0.25
+  ) +
+  geom_line(
+    data = ci_data,
+    aes(x = year_num, y = fit),
+    inherit.aes = FALSE,
+    color = col_trend,
+    linewidth = 0.9,
+    linetype = "dashed"
+  ) +
+  geom_point(
+    aes(fill = year),
+    shape = 21, size = 5.5,
+    color = "gray30", stroke = 0.5
+  ) +
+  geom_text(
+    aes(label = round(peak_depth, 2)),
+    vjust = -1.3, hjust = 0.5,
+    size = 3.5, color = "gray30"
+  ) +
+  annotate(
+    "text",
+    x = mean(range(peak_orp$year_num)),
+    y = 1.05,
+    label = lm_label,
+    size = 3.2,
+    color = "gray30",
+    hjust = 0.5
+  ) +
+  scale_y_reverse(limits = c(2.5, 1.0), breaks = seq(1.0, 2.5, 0.25)) +
+  scale_x_continuous(
+    breaks = unique(peak_orp$year_num),
+    labels = unique(peak_orp$year)
+  ) +
+  scale_fill_manual(values = year_colors, name = "Year") +
+  labs(
+    title = "Peak ORP depth by year",
+    x = "Year",
+    y = "Peak depth (m)"
+  ) +
+  theme_profile +
+  theme(legend.position = "right")
 
+# -------------------------------------------------------
+# COMBINED
+# -------------------------------------------------------
+combined_plot <- wrap_plots(
+  p_full,
+  p_zoom,
+  p_trend,
+  nrow = 1,
+  widths = c(1, 1.2, 0.9)
+) +
+  plot_annotation(
+    title = "ORP maximum depth across late-summer profiles",
+    subtitle = "Latest August ORP profiles, 2018–2024",
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+      plot.subtitle = element_text(size = 12, color = "gray40", hjust = 0.5)
+    )
+  )
 
+print(combined_plot)
