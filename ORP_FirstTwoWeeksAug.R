@@ -185,7 +185,7 @@ ci_data <- cbind(ci_data, as.data.frame(ci_pred))
 # -------------------------------------------------------
 # PLOT 1: Full ORP profile
 # -------------------------------------------------------
-p_full <- ggplot(
+p_full_orp <- ggplot(
   orp_profile,
   aes(x = mean_orp, y = Depth, color = year)
 ) +
@@ -209,7 +209,7 @@ p_full <- ggplot(
 # -------------------------------------------------------
 # PLOT 2: Zoomed ORP peak zone
 # -------------------------------------------------------
-p_zoom <- orp_profile %>%
+p_zoom_orp <- orp_profile %>%
   filter(Depth >= 1.0, Depth <= 2.5) %>%
   ggplot(aes(x = mean_orp, y = Depth, color = year)) +
   geom_path(linewidth = 0.9, alpha = 0.85) +
@@ -238,7 +238,7 @@ p_zoom <- orp_profile %>%
 # -------------------------------------------------------
 # PLOT 3: Peak depth over time + regression
 # -------------------------------------------------------
-p_trend <- ggplot(peak_orp, aes(x = year_num, y = peak_depth)) +
+p_trend_orp <- ggplot(peak_orp, aes(x = year_num, y = peak_depth)) +
   geom_ribbon(
     data = ci_data,
     aes(x = year_num, ymin = lwr, ymax = upr),
@@ -290,7 +290,7 @@ p_trend <- ggplot(peak_orp, aes(x = year_num, y = peak_depth)) +
 # -------------------------------------------------------
 # COMBINED
 # -------------------------------------------------------
-combined_plot <- wrap_plots(
+orp_combined_plot <- wrap_plots(
   p_full,
   p_zoom,
   p_trend,
@@ -306,4 +306,4 @@ combined_plot <- wrap_plots(
     )
   )
 
-print(combined_plot)
+print(orp_combined_plot)

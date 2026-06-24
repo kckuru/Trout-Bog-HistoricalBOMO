@@ -7,9 +7,9 @@ library(lubridate)
 library(here)
 library(patchwork)
 
-# -------------------------------------------------------
-# Color palette — diverging teal (2018) to brown (2025)
-# -------------------------------------------------------
+# --------------------------------------------
+# Color palette — teal (2018) to brown (2025)
+# --------------------------------------------
 year_colors <- c(
   "2018" = "#1A7A6E",
   "2019" = "#52A898",
@@ -141,7 +141,7 @@ lm_p     <- round(coef(summary(lm_fit))["year_num", "Pr(>|t|)"], 3)
 lm_r2    <- round(lm_sum$r.squared, 2)
 
 lm_label <- paste0(
-  "slope = ", lm_slope, " m yr⁻¹",
+  "slope = ", lm_slope, " m yr^-1",
   ",  p = ", lm_p,
   ",  R² = ", lm_r2
 )
@@ -164,21 +164,20 @@ ci_data <- cbind(ci_data, as.data.frame(ci_pred))
 # -------------------------------------------------------
 # PLOT 1: Full depth profile
 # -------------------------------------------------------
-p_full <- ggplot(turb_profile,
-                 aes(x     = mean_turb,
-                     y     = Depth,
-                     color = year)) +
+p_full <- turb_profile %>%
+  filter(Depth <= 6.5) %>%
+  ggplot(aes(x = mean_turb, y = Depth, color = year)) +
   geom_path(linewidth = 0.8, alpha = 0.85) +
   geom_point(aes(fill = year),
              shape = 21, size = 1.8, alpha = 0.9,
              color = "gray40", stroke = 0.3) +
-  scale_y_reverse(limits = c(8, 0), breaks = seq(0, 8, 1)) +
+  scale_y_reverse(limits = c(6.5, 0), breaks = seq(0, 6.5, 1)) +
   scale_x_continuous(limits = c(0, 7.5), breaks = seq(0, 7, 1)) +
   scale_color_manual(values = year_colors, name = "Year") +
   scale_fill_manual(values  = year_colors, name = "Year") +
   labs(
     title = "Full depth profile",
-    x     = "Mean turbidity (FNU)",
+    x     = "Turbidity (FNU)",
     y     = "Depth (m)"
   ) +
   theme_profile +
@@ -208,7 +207,7 @@ p_zoom <- turb_profile %>%
   scale_fill_manual(values  = year_colors, name = "Year") +
   labs(
     title = "Chlorobium plate zone (0.25–2.5 m)",
-    x     = "Mean turbidity (FNU)",
+    x     = "Turbidity (FNU)",
     y     = "Depth (m)"
   ) +
   theme_profile +
@@ -233,16 +232,27 @@ p_trend <- ggplot(peak_turb,
   geom_point(aes(fill = year),
              shape = 21, size = 5.5,
              color = "gray30", stroke = 0.5) +
-  geom_text(aes(label = round(peak_depth, 2)),
-            vjust = -1.3, hjust = 0.5,
-            size  = 3.5, color = "gray30") +
-  annotate("text",
-           x     = mean(range(peak_turb$year_num)),
-           y     = 0.82,
-           label = lm_label,
-           size  = 3.2,
-           color = "gray30",
-           hjust = 0.5) +
+  geom_label(
+    aes(label = round(peak_depth, 2)),
+    position = position_nudge(x = 0.1),
+    vjust = -1.2,
+    size  = 3.3,
+    fill  = "white",
+    label.size = 0.2,
+    color = "gray20"
+  ) +
+  annotate(
+    "label",
+    x = mean(range(peak_turb$year_num)),
+    y = 0.85,
+    label = lm_label,
+    size = 4.2,
+    color = "gray20",
+    fill = "white",
+    alpha = 0.85,
+    label.size = 0.25,
+    hjust = 0.5
+  ) +
   scale_y_reverse(limits = c(2.5, 0.75),
                   breaks = seq(0.75, 2.5, 0.25)) +
   scale_x_continuous(breaks = unique(peak_turb$year_num),
