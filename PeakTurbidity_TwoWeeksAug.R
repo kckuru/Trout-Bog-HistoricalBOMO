@@ -1,5 +1,5 @@
 ###########################################
-# Line graph for peak turbidity 2018-2025 #
+# Line graph for peak turbidity 2018-2026 #
 ###########################################
 
 library(tidyverse)
@@ -8,17 +8,18 @@ library(here)
 library(patchwork)
 
 # --------------------------------------------
-# Color palette — teal (2018) to brown (2025)
+# Color palette
 # --------------------------------------------
 year_colors <- c(
-  "2018" = "#1A7A6E",
-  "2019" = "#52A898",
-  "2020" = "#93C5BC",
-  "2021" = "#C4A882",
-  "2022" = "#B07520",
-  "2023" = "#8B4513",
-  "2024" = "#3D1A02",
-  "2025" = "#1A0A00"
+  "2018" = "#2166AC",
+  "2019" = "#3D8DC1",
+  "2020" = "#5FA8C9",
+  "2021" = "#7FB7B0",
+  "2022" = "#A6B889",
+  "2023" = "#C4A66A",
+  "2024" = "#B87832",
+  "2025" = "#8C510A",
+  "2026" = "#654321"
 )
 
 col_trend <- "#5C3A1E"
@@ -65,7 +66,8 @@ all_data <- bind_rows(
   read_trout_bog_data("2022_data") %>% mutate(year = "2022"),
   read_trout_bog_data("2023_data") %>% mutate(year = "2023"),
   read_trout_bog_data("2024_data") %>% mutate(year = "2024"),
-  read_trout_bog_data("2025_data") %>% mutate(year = "2025")
+  read_trout_bog_data("2025_data") %>% mutate(year = "2025"),
+  read_trout_bog_data("2026_data") %>% mutate(year = "2026")
 ) %>%
   mutate(
     datetime  = mdy_hms(paste(Date, Time), quiet = TRUE),
@@ -105,10 +107,13 @@ turb_profile <- all_data_aug %>%
   group_by(year, Depth) %>%
   summarise(
     mean_turb = mean(Turbidity, na.rm = TRUE),
-    sd_turb   = sd(Turbidity,   na.rm = TRUE),
+    sd_turb   = sd(Turbidity, na.rm = TRUE),
     se_turb   = sd_turb / sqrt(n()),
     n         = n(),
     .groups   = "drop"
+  ) %>%
+  mutate(
+    mean_turb = pmax(mean_turb, 0)
   )
 
 # -------------------------------------------------------
@@ -278,7 +283,7 @@ combined_plot <- wrap_plots(
 ) +
   plot_annotation(
     title    = "Chlorobium plate is shallowing as Trout Bog darkens",
-    subtitle = "Latest August turbidity profiles, 2018–2025",
+    subtitle = "Latest August turbidity profiles, 2018–2026",
     theme    = theme(
       plot.title    = element_text(face  = "bold",
                                    size  = 16,
@@ -290,4 +295,281 @@ combined_plot <- wrap_plots(
   )
 
 print(combined_plot) # this is a good one! I used it in lab meeting presentation
+
+#############################################################
+## Turbidity intensity (how strong is the Chlorobium peak) ##
+#############################################################
+
+p_intensity <- ggplot(peak_turb,
+                      aes(x = year_num, y = peak_turb)) +
+  
+  geom_point(aes(fill = year),
+             shape = 21,
+             size = 5.5,
+             color = "gray30",
+             stroke = 0.5) +
+  
+  geom_smooth(
+    method = "lm",
+    se = TRUE,
+    color = col_trend,
+    linetype = "dashed",
+    linewidth = 0.9
+  ) +
+  
+  geom_label(
+    aes(label = round(peak_turb, 2)),
+    position = position_nudge(x = 0.1),
+    vjust = -1.2,
+    size = 3.3,
+    fill = "white",
+    label.size = 0.2,
+    color = "gray20"
+  ) +
+  
+  scale_x_continuous(
+    breaks = unique(peak_turb$year_num),
+    labels = unique(peak_turb$year)
+  ) +
+  
+  labs(
+    title = "Peak turbidity intensity by year",
+    x = "Year",
+    y = "Peak turbidity (FNU)"
+  ) +
+  
+  scale_fill_manual(values = year_colors, name = "Year") +
+  theme_profile +
+  theme(legend.position = "right")
+
+p_intensity
+
+# -------------------------------------------------------
+# PLOT 3A: Peak depth over time
+# -------------------------------------------------------
+
+p_depth <- ggplot(peak_turb,
+                  aes(x = year_num, y = peak_depth)) +
+  
+  geom_ribbon(
+    data = ci_data,
+    aes(x = year_num, ymin = lwr, ymax = upr),
+    inherit.aes = FALSE,
+    fill = "#93C5BC",
+    alpha = 0.25
+  ) +
+  
+  geom_line(
+    data = ci_data,
+    aes(x = year_num, y = fit),
+    inherit.aes = FALSE,
+    color = col_trend,
+    linewidth = 0.9,
+    linetype = "dashed"
+  ) +
+  
+  geom_point(
+    aes(fill = year),
+    shape = 21,
+    size = 5.5,
+    color = "gray30",
+    stroke = 0.5
+  ) +
+  
+  geom_label(
+    aes(label = round(peak_depth, 2)),
+    position = position_nudge(x = 0.1),
+    vjust = -1.2,
+    size = 3.3,
+    fill = "white",
+    label.size = 0.2,
+    color = "gray20"
+  ) +
+  
+  scale_y_reverse(
+    limits = c(2.5, 0.75),
+    breaks = seq(0.75, 2.5, 0.25)
+  ) +
+  
+  scale_x_continuous(
+    breaks = unique(peak_turb$year_num),
+    labels = unique(peak_turb$year)
+  ) +
+  
+  scale_fill_manual(values = year_colors, name = "Year") +
+  
+  labs(
+    title = "Peak position",
+    x = "Year",
+    y = "Peak depth (m)"
+  ) +
+  
+  theme_profile +
+  theme(legend.position = "none")
+
+
+# -------------------------------------------------------
+# Linear regression — peak intensity ~ year
+# -------------------------------------------------------
+
+lm_intensity <- lm(peak_turb ~ year_num, data = peak_turb)
+
+lm_int_sum <- summary(lm_intensity)
+
+lm_int_slope <- round(
+  coef(lm_intensity)[["year_num"]], 2
+)
+
+lm_int_p <- round(
+  coef(summary(lm_intensity))["year_num", "Pr(>|t|)"],
+  3
+)
+
+lm_int_r2 <- round(
+  lm_int_sum$r.squared,
+  2
+)
+
+lm_int_label <- paste0(
+  "slope = ", lm_int_slope, " FNU yr^-1",
+  ",  p = ", lm_int_p,
+  ",  R² = ", lm_int_r2
+)
+
+cat("\nLinear regression — peak intensity ~ year:\n")
+cat(lm_int_label, "\n")
+
+
+# -------------------------------------------------------
+# Confidence interval for peak intensity
+# -------------------------------------------------------
+
+ci_intensity <- data.frame(
+  year_num = seq(
+    min(peak_turb$year_num),
+    max(peak_turb$year_num),
+    length.out = 100
+  )
+)
+
+ci_int_pred <- predict(
+  lm_intensity,
+  newdata = ci_intensity,
+  interval = "confidence",
+  level = 0.95
+)
+
+ci_intensity <- cbind(
+  ci_intensity,
+  as.data.frame(ci_int_pred)
+)
+
+
+# -------------------------------------------------------
+# PLOT 3B: Peak intensity over time
+# -------------------------------------------------------
+
+p_intensity <- ggplot(
+  peak_turb,
+  aes(x = year_num, y = peak_turb)
+) +
+  
+  geom_ribbon(
+    data = ci_intensity,
+    aes(
+      x = year_num,
+      ymin = lwr,
+      ymax = upr
+    ),
+    inherit.aes = FALSE,
+    fill = "#93C5BC",
+    alpha = 0.25
+  ) +
+  
+  geom_line(
+    data = ci_intensity,
+    aes(x = year_num, y = fit),
+    inherit.aes = FALSE,
+    color = col_trend,
+    linewidth = 0.9,
+    linetype = "dashed"
+  ) +
+  
+  geom_point(
+    aes(fill = year),
+    shape = 21,
+    size = 5.5,
+    color = "gray30",
+    stroke = 0.5
+  ) +
+  
+  geom_label(
+    aes(label = round(peak_turb, 2)),
+    position = position_nudge(x = 0.1),
+    vjust = -1.2,
+    size = 3.3,
+    fill = "white",
+    label.size = 0.2,
+    color = "gray20"
+  ) +
+  
+  annotate(
+    "label",
+    x = mean(range(peak_turb$year_num)),
+    y = 5.7,
+    label = lm_int_label,
+    size = 4.0,
+    color = "gray20",
+    fill = "white",
+    alpha = 0.85,
+    label.size = 0.25,
+    hjust = 0.5
+  ) +
+  
+  scale_y_continuous(
+    limits = c(0, 6),
+    breaks = seq(0, 6, 1)
+  ) +
+  
+  scale_x_continuous(
+    breaks = unique(peak_turb$year_num),
+    labels = unique(peak_turb$year)
+  ) +
+  
+  scale_fill_manual(values = year_colors, name = "Year") +
+  
+  labs(
+    title = "Peak intensity",
+    x = "Year",
+    y = "Peak turbidity (FNU)"
+  ) +
+  
+  theme_profile +
+  theme(legend.position = "none")
+
+
+# -------------------------------------------------------
+# COMBINE
+# -------------------------------------------------------
+
+peak_characteristics <- p_depth + p_intensity +
+  
+  plot_annotation(
+    title = "The Chlorobium-associated turbidity peak is shifting and weakening",
+    subtitle = "Latest August sampling date, 2018–2026",
+    theme = theme(
+      plot.title = element_text(
+        face = "bold",
+        size = 16,
+        hjust = 0.5
+      ),
+      plot.subtitle = element_text(
+        size = 12,
+        color = "gray40",
+        hjust = 0.5
+      )
+    )
+  )
+
+print(peak_characteristics)
 
